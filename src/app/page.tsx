@@ -9,6 +9,8 @@ import ListingCard from '@/components/ListingCard';
 import { Input, Field, Button, Select, Disclosure, DisclosureButton, DisclosurePanel, Switch } from '@headlessui/react';
 import clsx from 'clsx';
 
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+
 type Listing = {
   title: string;
   link: string;
@@ -21,6 +23,24 @@ type Listing = {
 
 type FilterKey = keyof Pick<Listing, 'title' | 'company' | 'location'>;
 
+const DEFAULTS = {
+  search: '',
+  filter: 'company' as FilterKey,
+  itemsPerPage: 20,
+  page: 1,
+  isFaang: false,
+  jobType: 'both' as 'internships' | 'new-grads' | 'both',
+};
+
+const QK = {
+  q: 'q',           
+  by: 'by',         
+  ipp: 'ipp',       
+  p: 'p',           
+  faang: 'faang',   
+  type: 'type',     
+} as const;
+
 const delaGothicOne = Dela_Gothic_One({
   weight: ['400'],
   style: ['normal'],
@@ -29,19 +49,27 @@ const delaGothicOne = Dela_Gothic_One({
 })
 
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [listings, setListings] = useState<Listing[]>([]);
   const [filtered, setFiltered] = useState<Listing[]>([]);
   const [displayedListings, setDisplayedListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("company");
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [page, setPage] = useState(1);
+
+  const [search, setSearch] = useState(DEFAULTS.search);
+  const [filter, setFilter] = useState<FilterKey>(DEFAULTS.filter);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULTS.itemsPerPage);
+  const [page, setPage] = useState(DEFAULTS.page);
   const [hasMore, setHasMore] = useState(true);
   const [showAlertForm, setShowAlertForm] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
-  const [isFaang, setIsFaang] = useState(false);
-  const [jobType, setJobType] = useState("both");
+  const [isFaang, setIsFaang] = useState(DEFAULTS.isFaang);
+  const [jobType, setJobType] = useState<'internships' | 'new-grads' | 'both'>(DEFAULTS.jobType);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didInitFromUrl = useRef(false);
 
   const topTechCompanies = [
     "Apple", "Microsoft", "Nvidia", "TikTok", "Alphabet", "Amazon", "Meta", "Taiwan Semiconductor Manufacturing Company (TSMC)", "Broadcom", "Tesla", "Tencent",
@@ -56,14 +84,94 @@ export default function Home() {
     "Red Hat", "Citrix Systems", "Fortinet", "Palo Alto Networks", "Check Point Software", "Trend Micro", "Kaspersky Lab", "McAfee", "Symantec", "NortonLifeLock"
   ];
 
-  const handleJobTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setJobType(event.target.value);
-  };
+  function parseParams(sp: URLSearchParams) {
+    const next = {
+      search: sp.get(QK.q) ?? DEFAULTS.search,
+      filter: (sp.get(QK.by) as FilterKey) ?? DEFAULTS.filter,
+      itemsPerPage: Number(sp.get(QK.ipp) ?? DEFAULTS.itemsPerPage),
+      page: Number(sp.get(QK.p) ?? DEFAULTS.page),
+      isFaang: (sp.get(QK.faang) ?? (DEFAULTS.isFaang ? '1' : '0')) === '1',
+      jobType: (sp.get(QK.type) as 'internships' | 'new-grads' | 'both') ?? DEFAULTS.jobType,
+    };
+    if (!['title','company','location'].includes(next.filter)) next.filter = DEFAULTS.filter;
+    if (![20,50,100].includes(next.itemsPerPage)) next.itemsPerPage = DEFAULTS.itemsPerPage;
+    if (next.page < 1) next.page = 1;
+    if (!['internships','new-grads','both'].includes(next.jobType)) next.jobType = DEFAULTS.jobType;
+    return next;
+  }
 
-  const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value as FilterKey;
-    setFilter(value);
-  };
+  function serializeParams(state: {
+    search: string;
+    filter: FilterKey;
+    itemsPerPage: number;
+    page: number;
+    isFaang: boolean;
+    jobType: 'internships' | 'new-grads' | 'both';
+  }) {
+    const sp = new URLSearchParams();
+    if (state.search) sp.set(QK.q, state.search);
+    if (state.filter !== DEFAULTS.filter) sp.set(QK.by, state.filter);
+    if (state.itemsPerPage !== DEFAULTS.itemsPerPage) sp.set(QK.ipp, String(state.itemsPerPage));
+    if (state.page !== DEFAULTS.page) sp.set(QK.p, String(state.page));
+    if (state.isFaang !== DEFAULTS.isFaang) sp.set(QK.faang, state.isFaang ? '1' : '0');
+    if (state.jobType !== DEFAULTS.jobType) sp.set(QK.type, state.jobType);
+    return sp;
+  }
+
+  function replaceUrlFromState(nextState: Partial<{
+    search: string;
+    filter: FilterKey;
+    itemsPerPage: number;
+    page: number;
+    isFaang: boolean;
+    jobType: 'internships' | 'new-grads' | 'both';
+  }>, debounce = false) {
+    const full = {
+      search,
+      filter,
+      itemsPerPage,
+      page,
+      isFaang,
+      jobType,
+      ...nextState,
+    };
+    const sp = serializeParams(full);
+    const url = sp.toString() ? `${pathname}?${sp.toString()}` : pathname;
+
+    const doReplace = () => router.replace(url, { scroll: false });
+
+    if (debounce) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(doReplace, 250);
+    } else {
+      doReplace();
+    }
+  }
+
+  useEffect(() => {
+    if (didInitFromUrl.current) return;
+    const parsed = parseParams(new URLSearchParams(searchParams?.toString() ?? ''));
+    setSearch(parsed.search);
+    setFilter(parsed.filter);
+    setItemsPerPage(parsed.itemsPerPage);
+    setPage(parsed.page);
+    setIsFaang(parsed.isFaang);
+    setJobType(parsed.jobType);
+    didInitFromUrl.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!didInitFromUrl.current) return;
+    const parsed = parseParams(new URLSearchParams(searchParams?.toString() ?? ''));
+    if (parsed.search !== search) setSearch(parsed.search);
+    if (parsed.filter !== filter) setFilter(parsed.filter);
+    if (parsed.itemsPerPage !== itemsPerPage) setItemsPerPage(parsed.itemsPerPage);
+    if (parsed.page !== page) setPage(parsed.page);
+    if (parsed.isFaang !== isFaang) setIsFaang(parsed.isFaang);
+    if (parsed.jobType !== jobType) setJobType(parsed.jobType);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams?.toString()]);
 
   useEffect(() => {
     async function fetchData() {
@@ -101,8 +209,11 @@ export default function Home() {
     }
 
     setFiltered(filteredListings);
+    // Reset page if any filtering knobs changed except page itself
     setPage(1);
     setHasMore(true);
+    replaceUrlFromState({ page: 1 }, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, filter, listings, isFaang, jobType]);
 
   useEffect(() => {
@@ -111,6 +222,8 @@ export default function Home() {
     const newDisplayedListings = filtered.slice(startIndex, endIndex);
     setDisplayedListings(newDisplayedListings);
     setHasMore(endIndex < filtered.length);
+    replaceUrlFromState({}, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, page, itemsPerPage]);
 
   const lastListingElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -127,18 +240,28 @@ export default function Home() {
     if (node) observer.current.observe(node);
   }, [isLoading, hasMore]);
 
+  const handleJobTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const next = event.target.value as 'internships' | 'new-grads' | 'both';
+    setJobType(next);
+  };
+
+  const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value as FilterKey;
+    setFilter(value);
+  };
+
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
     setPage(1);
     setHasMore(true);
   };
+
   return (
     <div className="min-h-screen bg-gray-950/50 text-gray-100 px-4">
 
       <div className="max-w-4xl items-center mx-auto">
         <div className="relative flex w-full pt-4 justify-between gap-2 items-center group cursor-pointer">
-          <div
-            className={`${delaGothicOne.className} text-4xl`}>
+          <div className={`${delaGothicOne.className} text-4xl`}>
             SCOUT
           </div>
           <div>
@@ -152,13 +275,13 @@ export default function Home() {
       <div className="container max-w-4xl mx-auto">
         <div className="mx-auto">
           <div className="flex flex-col w-full py-4 gap-4">
-            {/* Search input - always visible */}
+            {/* Search */}
             <div className="w-full">
               <Field>
                 <Input
                   type="text"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)} // debounced URL happens in effect
                   placeholder={`Search by ${filter}`}
                   className={clsx(
                     'block w-full rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white',
@@ -211,12 +334,15 @@ export default function Home() {
               </div>
 
               <div className="w-2/3 flex gap-2">
-                <div className={clsx(
-                  'flex justify-between items-center w-1/2 appearance-none rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white',
-                )}>
+                <div
+                  className={clsx(
+                    'flex justify-between items-center w-1/2 appearance-none rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white',
+                  )}
+                >
                   <span>FAANG+</span>
                   <Switch
-                    onClick={() => setIsFaang(!isFaang)}
+                    checked={isFaang}
+                    onChange={(val: boolean) => setIsFaang(val)}
                     className={`w-10 h-5 flex items-center rounded-full p-1 duration-200 ${isFaang ? "bg-blue-500" : "bg-gray-600"}`}
                   >
                     <div className={`h-4 w-4 rounded-full bg-white transform duration-200 ${isFaang ? "translate-x-5" : "translate-x-0"}`} />
@@ -285,7 +411,8 @@ export default function Home() {
                   <div className="flex justify-between items-center w-full appearance-none cursor-pointer rounded-md border-none bg-gray-950/20 py-1.5 px-3 text-sm/6 text-white">
                     <span>FAANG+</span>
                     <Switch
-                      onClick={() => setIsFaang(!isFaang)}
+                      checked={isFaang}
+                      onChange={(val: boolean) => setIsFaang(val)}
                       className={`w-10 h-5 flex items-center rounded-full p-1 duration-200 ${isFaang ? "bg-blue-500" : "bg-gray-600"}`}
                     >
                       <div className={`h-4 w-4 rounded-full bg-white transform duration-200 ${isFaang ? "translate-x-5" : "translate-x-0"}`} />
@@ -310,7 +437,6 @@ export default function Home() {
               </Disclosure>
             </div>
           </div>
-
 
           {isLoading ? (
             <div className="container mx-auto flex-col flex items-center justify-center">
@@ -354,6 +480,6 @@ export default function Home() {
           onClose={() => setShowAlertForm(false)}
         />
       </div>
-    </div >
+    </div>
   );
 }

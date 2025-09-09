@@ -105,15 +105,12 @@ function removeEmojis(text: string): string {
   return text.replace(emojiRegex, '');
 }
 
-/** Strong de-dupe: company+title+domain (if present); otherwise company+title */
 function dedupe(list: Listing[]): Listing[] {
   const seen = new Set<string>();
   const out: Listing[] = [];
   for (const it of list) {
-    const domain = new URL(it.link || "https://example.com").hostname.replace(/^www\./, "");
-    const key = `${norm(it.company)}|${norm(it.title)}|${domain}`;
-    if (!seen.has(key)) {
-      seen.add(key);
+    if (!seen.has(it.link)) {
+      seen.add(it.link);
       out.push(it);
     }
   }
@@ -128,8 +125,6 @@ function sortByDateDesc(list: Listing[]): Listing[] {
     return tb - ta;
   });
 }
-
-/** ------------ Source Parsers ------------ **/
 
 async function fetchScoutListings(): Promise<Listing[]> {
   const url = "https://raw.githubusercontent.com/cvrve/Summer2025-Internships/dev/README.md";
@@ -231,8 +226,7 @@ async function fetchSimplifyNewGradListings(): Promise<Listing[]> {
     const company = removeEmojis(tds.eq(0).text().trim());
     const title = tds.eq(1).text().trim();
     const location = tds.eq(2).text().trim();
-    const salary = tds.eq(3).text().trim();
-    const link = absolutize($row("td a").attr("href"));
+    const link = tds.eq(3).find("a").attr("href");
     const age = tds.eq(4).text().trim();
     const datePosted = toUSDateString(age);
 
@@ -242,14 +236,15 @@ async function fetchSimplifyNewGradListings(): Promise<Listing[]> {
         title,
         location,
         link,
+        salary: "",
         datePosted,
-        salary,
         jobType: "newgrad",
         source: "simplify",
       });
     }
   });
 
+  
   return out;
 }
 
