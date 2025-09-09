@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 interface CompanyLogoProps {
   companyName: string;
+  size?: number;
 }
+
+type CachedLogo = { url: string; ts: number };
 
 interface BrandSearchResult {
   brandId: string;
@@ -16,106 +19,129 @@ interface BrandSearchResult {
   verified?: boolean;
 }
 
-const CompanyLogo = ({ companyName }: CompanyLogoProps) => {
-  const [logoUrl, setLogoUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+const TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-  // Normalize company name for consistent cache keys
-  const normalizeCompanyName = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-      .trim();
-  };
+const norm = (s: string) =>
+  s.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
 
-  // Generate a consistent cache key
-  const getCacheKey = (name: string): string => {
-    const normalized = normalizeCompanyName(name);
-    return `company-logo-${normalized}`;
-  };
+const makeKey = (name: string) => `company-logo:${norm(name)}`;
+
+export default function CompanyLogo({ companyName, size = 48 }: CompanyLogoProps) {
+  const [url, setUrl] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const cacheKey = useMemo(() => makeKey(companyName), [companyName]);
 
   useEffect(() => {
-    const cacheKey = getCacheKey(companyName);
+    let cancelled = false;
 
-    const fetchLogo = async () => {
-      // Try to get from cache first
+    const readCache = (): string | null => {
       try {
-        const cachedLogos = JSON.parse(localStorage.getItem('companyLogos') || '{}');
-        if (cachedLogos[cacheKey]) {
-          setLogoUrl(cachedLogos[cacheKey]);
-          setIsLoading(false);
-          return;
+        const raw = localStorage.getItem(cacheKey);
+        if (!raw) return null;
+        const { url, ts } = JSON.parse(raw) as CachedLogo;
+        if (!url || typeof ts !== "number") return null;
+        if (Date.now() - ts > TTL_MS) {
+          localStorage.removeItem(cacheKey);
+          return null;
         }
-      } catch (error) {
-        console.error('Error reading from cache:', error);
-        // Clear corrupted cache
-        localStorage.removeItem('companyLogos');
-      }
-
-      try {
-        const response = await fetch(`https://api.brandfetch.io/v2/search/${encodeURIComponent(companyName)}`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.BRANCHFETCH_SECRET}`
-          }
-        });
-
-        const data = await response.json() as BrandSearchResult[];
-
-        if (data && data.length > 0 && data[0].icon) {
-          let newLogoUrl = data[0].icon;
-          if (companyName.includes('Meta')) {
-            newLogoUrl = data[1]?.icon
-          }
-          setLogoUrl(newLogoUrl);
-
-          // Update cache with normalized key
-          try {
-            const existingCache = JSON.parse(localStorage.getItem('companyLogos') || '{}');
-            const updatedCache = {
-              ...existingCache,
-              [cacheKey]: newLogoUrl
-            };
-            localStorage.setItem('companyLogos', JSON.stringify(updatedCache));
-          } catch (error) {
-            console.error('Error updating cache:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching logo:', error);
-      } finally {
-        setIsLoading(false);
+        return url;
+      } catch {
+        // If this key is corrupted, just clear it
+        localStorage.removeItem(cacheKey);
+        return null;
       }
     };
 
-    fetchLogo();
-  }, [companyName]);
+    const writeCache = (url: string) => {
+      try {
+        const payload: CachedLogo = { url, ts: Date.now() };
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // ignore quota errors etc.
+      }
+    };
 
-  if (isLoading) {
-    return <div className="w-6 h-6 animate-pulse bg-gray-200 dark:bg-gray-700 rounded-full" />;
+    const fetchLogo = async () => {
+      // 1) cache hit?
+      const cached = readCache();
+      if (cached) {
+        if (!cancelled) {
+          setUrl(cached);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // 2) fetch
+      try {
+        const res = await fetch(
+          `https://api.brandfetch.io/v2/search/${encodeURIComponent(companyName)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.BRANDFETCH_TOKEN}`,
+            },
+          }
+        );
+
+        const data = (await res.json()) as BrandSearchResult[] | { message?: string };
+        if (!Array.isArray(data) || data.length === 0) throw new Error("No results");
+
+        // Prefer verified, then highest qualityScore, then original order
+        const best = [...data]
+          .filter((d) => d.icon)
+          .sort((a, b) => {
+            const va = a.verified ? 1 : 0;
+            const vb = b.verified ? 1 : 0;
+            if (vb !== va) return vb - va;
+            if (b.qualityScore !== a.qualityScore) return b.qualityScore - a.qualityScore;
+            return b._score - a._score;
+          })[0];
+
+        if (best?.icon) {
+          if (!cancelled) {
+            setUrl(best.icon);
+            writeCache(best.icon);
+          }
+        }
+      } catch {
+        // Swallow and let fallback UI render
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    setUrl("");
+    fetchLogo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, companyName]);
+
+  if (loading) {
+    return <div className="animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" style={{ width: size, height: size }} />;
   }
 
-  if (!logoUrl) {
+  if (!url) {
     return (
-      <div className='w-12 h-12 relative flex items-center justify-center'>
-        <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full" />
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        <div className="rounded-full bg-gray-200 dark:bg-gray-700" style={{ width: size * 0.6, height: size * 0.6 }} />
       </div>
     );
   }
 
   return (
-    <div className="relative h-12 w-12">
+    <div className="relative" style={{ width: size, height: size }}>
       <Image
-        src={logoUrl}
+        src={url}
         alt={`${companyName} logo`}
         fill
         className="rounded-md object-contain"
-        onError={() => setLogoUrl('')}
+        sizes={`${size}px`}
+        onError={() => setUrl("")}
         unoptimized
-        sizes="48px"
       />
     </div>
   );
-};
-
-export default CompanyLogo;
+}

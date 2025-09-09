@@ -7,6 +7,30 @@ datasource db {
   url      = env("POSTGRES_PRISMA_URL")
 }
 
+model JobListing {
+  id          Int      @id @default(autoincrement())
+  hash        String   @unique // Unique identifier based on company+title+location+link
+  company     String
+  title       String
+  location    String
+  link        String
+  datePosted  String
+  salary      String?
+  jobType     JobType
+  source      String   // Which scraper source this came from
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([hash])
+  @@index([createdAt])
+  @@index([jobType])
+}
+
+enum JobType {
+  INTERNSHIP
+  NEWGRAD
+}
+
 model Subscription {
   id          Int      @id @default(autoincrement())
   email       String

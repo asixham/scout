@@ -45,7 +45,7 @@ export default function Home() {
 
   const topTechCompanies = [
     "Apple", "Microsoft", "Nvidia", "TikTok", "Alphabet", "Amazon", "Meta", "Taiwan Semiconductor Manufacturing Company (TSMC)", "Broadcom", "Tesla", "Tencent",
-    "Samsung Electronics", "ASML", "Oracle", "Adobe", "Salesforce", "Cisco", "IBM", "Intel", "Shopify", "SAP",
+    "Samsung Electronics", "ASML", "Google", "Oracle", "Adobe", "Salesforce", "Cisco", "IBM", "Intel", "Shopify", "SAP",
     "Accenture", "Qualcomm", "AMD", "ServiceNow", "Intuit", "Snowflake", "Workday", "Square", "Spotify", "Zoom",
     "Palantir", "Dropbox", "Atlassian", "Twilio", "Datadog", "CrowdStrike", "Okta", "Zscaler", "DocuSign", "RingCentral",
     "Slack Technologies", "Pinterest", "Snap", "Uber", "Lyft", "Airbnb", "DoorDash", "Robinhood", "Coinbase", "Stripe",
