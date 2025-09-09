@@ -60,9 +60,17 @@ const delaGothicOne = Dela_Gothic_One({
 });
 
 export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeWithParams />
+    </Suspense>
+  );
+}
+
+function HomeWithParams() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams();  
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [filtered, setFiltered] = useState<Listing[]>([]);
@@ -275,10 +283,8 @@ export default function Home() {
     setPage(1);
     setHasMore(true);
   };
-
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="min-h-screen bg-gray-950/50 text-gray-100 px-4">
+    <div className="min-h-screen bg-gray-950/50 text-gray-100 px-4">
         <div className="max-w-4xl items-center mx-auto">
           <div className="relative flex w-full pt-4 justify-between gap-2 items-center group cursor-pointer">
             <div className={`${delaGothicOne.className} text-4xl`}>SCOUT</div>
@@ -519,6 +525,5 @@ export default function Home() {
           />
         </div>
       </div>
-    </Suspense>
-  );
+  )
 }
