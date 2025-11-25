@@ -325,8 +325,7 @@ function HomeWithParams() {
                         onChange={handleFilterChange}
                         className={clsx(
                           "block w-full appearance-none cursor-pointer rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white",
-                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25",
-                          "*:text-black"
+                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25"
                         )}
                       >
                         <option value="title">Job Title</option>
@@ -346,8 +345,7 @@ function HomeWithParams() {
                         }
                         className={clsx(
                           "block w-full appearance-none cursor-pointer rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white",
-                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25",
-                          "*:text-black"
+                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25"
                         )}
                       >
                         <option value={20}>20 per page</option>
@@ -384,8 +382,7 @@ function HomeWithParams() {
                         onChange={handleJobTypeChange}
                         className={clsx(
                           "block w-full appearance-none cursor-pointer rounded-md border-none bg-gray-900 py-1.5 px-3 text-sm/6 text-white",
-                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25",
-                          "*:text-black"
+                          "focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25"
                         )}
                       >
                         <option value="internships">Just Internships</option>
