@@ -1,0 +1,173 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Slightly lighter “deep grey” background */
+  --background: oklch(0.18 0.0143 284.88);
+  --foreground: oklch(0.96 0.005 275);
+  --card: oklch(0.2 0.012 275);
+  --card-foreground: oklch(0.96 0.005 275);
+  --popover: oklch(0.2 0.012 275);
+  --popover-foreground: oklch(0.96 0.005 275);
+  /* Cooler blue accent */
+  --primary: oklch(0.7 0.17 240);
+  --primary-foreground: oklch(0.98 0.01 240);
+  --secondary: oklch(0.23 0.015 275);
+  --secondary-foreground: oklch(0.9 0.01 275);
+  --muted: oklch(0.23 0.012 275);
+  --muted-foreground: oklch(0.6 0.02 275);
+  --accent: oklch(0.7 0.17 240);
+  --accent-foreground: oklch(0.98 0.01 240);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.98 0.01 240);
+  --border: oklch(0.27 0.02 275);
+  --input: oklch(0.23 0.015 275);
+  --ring: oklch(0.7 0.17 240);
+  --glow: oklch(0.7 0.17 240);
+  --glow-dark: oklch(0.5 0.16 240);
+  --chart-1: oklch(0.7 0.17 240);
+  --chart-2: oklch(0.62 0.16 230);
+  --chart-3: oklch(0.55 0.14 250);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.18 0.01 275);
+  --sidebar-foreground: oklch(0.96 0.005 275);
+  --sidebar-primary: oklch(0.7 0.17 240);
+  --sidebar-primary-foreground: oklch(0.98 0.01 240);
+  --sidebar-accent: oklch(0.23 0.015 275);
+  --sidebar-accent-foreground: oklch(0.96 0.005 275);
+  --sidebar-border: oklch(0.27 0.02 275);
+  --sidebar-ring: oklch(0.7 0.17 240);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  --font-display: var(--font-display), system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-glow: var(--glow);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Subtle gradient wash for depth - minimal yet interesting */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      oklch(0.7 0.17 240 / 0.06) 0%,
+      transparent 50%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+/* Card hover: moving outline glow (travels around card) + darker glow */
+@property --card-glow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes card-glow-rotate {
+  to {
+    --card-glow-angle: 360deg;
+  }
+}
+
+@layer utilities {
+  /* Wrapper that owns the animated border only */
+  .card-glow-wrapper {
+    position: relative;
+    display: block;
+    border-radius: calc(var(--radius-lg) + 2px);
+    padding: 2px;
+  }
+  .card-glow-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--card-glow-angle),
+      transparent 0deg 195deg,
+      oklch(0.6 0.16 240 / 0.5) 215deg,
+      oklch(0.5 0.16 240 / 0.8) 235deg,
+      oklch(0.6 0.16 240 / 0.5) 255deg,
+      transparent 275deg 360deg
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease-out;
+    animation: card-glow-rotate 5s linear infinite;
+    animation-play-state: paused;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .card-glow-wrapper:hover::before {
+    opacity: 1;
+    animation-play-state: running;
+  }
+
+  /* Actual card sits on top, covering the center so only the outline shows */
+  .card-glow {
+    position: relative;
+    z-index: 1;
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 0 0 1px var(--border),
+      0 1px 2px oklch(0 0 0 / 0.05);
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+  .card-glow-wrapper:hover .card-glow {
+    box-shadow:
+      0 0 0 1px transparent,
+      0 0 18px oklch(0.5 0.16 240 / 0.25),
+      0 0 32px oklch(0.5 0.16 240 / 0.12);
+  }
+}
