@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Header } from "@/components/scout/header";
 import { ListingsFeed } from "@/components/scout/listings-feed";
 import { LogoCacheProvider } from "@/lib/logo-cache";
@@ -7,7 +8,9 @@ export default function Home() {
     <main className="relative min-h-screen bg-background z-[1]">
       <Header />
       <LogoCacheProvider>
-        <ListingsFeed />
+        <Suspense fallback={null}>
+          <ListingsFeed />
+        </Suspense>
       </LogoCacheProvider>
     </main>
   );
