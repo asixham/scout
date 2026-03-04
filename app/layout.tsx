@@ -13,23 +13,36 @@ const delaGothic = Dela_Gothic_One({
 
 export const metadata: Metadata = {
   title: 'Scout - Find Tech Jobs & Internships',
-  description: 'Discover new grad and internship opportunities in software engineering. Aggregated from top job boards, updated daily.',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: '/favicon/favicon-32x32.png',
+        type: 'image/png',
+        sizes: '32x32',
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
+        url: '/favicon/favicon-16x16.png',
+        type: 'image/png',
+        sizes: '16x16',
       },
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/favicon/android-chrome-192x192.png',
+        type: 'image/png',
+        sizes: '192x192',
+      },
+      {
+        url: '/favicon/android-chrome-512x512.png',
+        type: 'image/png',
+        sizes: '512x512',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: '/favicon/apple-touch-icon.png',
+    other: [
+      {
+        rel: 'manifest',
+        url: '/favicon/site.webmanifest',
+      },
+    ],
   },
 }
 
