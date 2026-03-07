@@ -147,6 +147,34 @@ export interface Listing {
   logoUrl: string;
 }
 
+const DOMAIN_OVERRIDES: Record<string, string> = {
+  amazon: "amazon.com",
+  box: "box.com",
+  etched: "etched.ai",
+  harvey: "harvey.ai",
+  intuitive: "intuitive.com",
+  ironclad: "ironcladapp.com",
+  molex: "molex.com",
+  parspec: "parspec.io",
+  "renesas electronics": "renesas.com",
+  rocket: "rocketcompanies.com",
+  "smith nephew": "smith-nephew.com",
+  "t mobile usa": "t-mobile.com",
+  "the clorox": "clorox.com",
+  vrad: "vrad.com",
+};
+
+const ATS_HOST_PATTERNS = [
+  /(^|\.)ashbyhq\.com$/i,
+  /(^|\.)greenhouse\.io$/i,
+  /(^|\.)myworkdayjobs\.com$/i,
+  /(^|\.)myworkdaysite\.com$/i,
+  /(^|\.)smartrecruiters\.com$/i,
+  /(^|\.)avature\.net$/i,
+];
+
+const MULTI_PART_TLDS = new Set(["co.uk", "com.au", "com.br", "co.jp"]);
+
 function extractLink(cell: string): string {
   // Match markdown link: [text](url)
   const mdLink = cell.match(/\[([^\]]*)\]\(([^)]+)\)/);
@@ -173,8 +201,76 @@ function cleanText(text: string): string {
     .trim();
 }
 
-function getLogoUrl(company: string): string {
-  return "";
+function normalizeCompanyKey(company: string): string {
+  return company
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\b(inc|llc|corp|corporation|company)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function registrableDomain(hostname: string): string {
+  const host = hostname.toLowerCase().replace(/^www\./, "");
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) return host;
+
+  const lastTwo = parts.slice(-2).join(".");
+  if (MULTI_PART_TLDS.has(lastTwo) && parts.length >= 3) {
+    return parts.slice(-3).join(".");
+  }
+
+  return lastTwo;
+}
+
+function looksLikeAtsHost(hostname: string): boolean {
+  return ATS_HOST_PATTERNS.some((pattern) => pattern.test(hostname));
+}
+
+function normalizeLabel(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function inferLogoDomain(company: string, jobUrl: string): string {
+  const override = DOMAIN_OVERRIDES[normalizeCompanyKey(company)];
+  if (override) return override;
+
+  try {
+    const url = new URL(jobUrl);
+    const hostname = url.hostname.toLowerCase();
+
+    if (!looksLikeAtsHost(hostname)) {
+      return registrableDomain(hostname);
+    }
+
+    const labels = hostname.split(".").filter(Boolean);
+    const firstLabel = labels[0];
+    const normalizedCompany = normalizeLabel(company);
+
+    if (
+      firstLabel &&
+      !["jobs", "careers", "wd1", "wd5", "www", "jobboards", "job-boards"].includes(firstLabel)
+    ) {
+      return `${normalizeLabel(firstLabel)}.com`;
+    }
+
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+    for (const segment of pathSegments) {
+      const cleaned = normalizeLabel(segment);
+      if (!cleaned || cleaned.length < 3) continue;
+      if (!["en", "us", "job", "jobs", "careers", "external", "recruiting"].includes(cleaned)) {
+        return `${cleaned}.com`;
+      }
+    }
+
+    if (normalizedCompany) {
+      return `${normalizedCompany}.com`;
+    }
+  } catch {
+    // Fall back to a normalized company-name domain guess.
+  }
+
+  return `${normalizeLabel(company)}.com`;
 }
 
 function parseCvrveTable(markdown: string): Listing[] {
@@ -233,7 +329,7 @@ function parseCvrveTable(markdown: string): Listing[] {
       type: "internship",
       source: "cvrve",
       isFaang,
-      logoUrl: getLogoUrl(company),
+      logoUrl: inferLogoDomain(company, url),
     });
   }
 
@@ -320,7 +416,7 @@ function parseSpeedyApplyTable(markdown: string): Listing[] {
       type: currentSection,
       source: "speedyapply",
       isFaang,
-      logoUrl: getLogoUrl(company),
+      logoUrl: inferLogoDomain(company, url),
     });
   }
 
@@ -397,7 +493,7 @@ function parseSimplifyTable(markdown: string): Listing[] {
       type: "newgrad",
       source: "simplify",
       isFaang,
-      logoUrl: getLogoUrl(company),
+      logoUrl: inferLogoDomain(company, url),
     });
   }
 

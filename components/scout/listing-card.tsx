@@ -18,7 +18,7 @@ export function ListingCard({ listing }: ListingCardProps) {
         className="group flex gap-4 items-center rounded-lg border border-border bg-card p-4 card-glow"
       >
       <div className="flex-shrink-0 h-11 w-11 rounded-lg bg-secondary flex items-center justify-center overflow-hidden border border-border">
-        <CompanyLogo companyName={listing.company} />
+        <CompanyLogo companyName={listing.company} domain={listing.logoUrl} />
       </div>
 
       <div className="flex-1">
