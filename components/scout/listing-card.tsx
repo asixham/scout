@@ -2,7 +2,6 @@
 
 import { ExternalLink, MapPin, DollarSign, Building2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
-import { useLogoUrl } from "@/lib/logo-cache";
 import type { Listing } from "@/app/api/listings/route";
 
 interface ListingCardProps {
@@ -10,27 +9,17 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
-  const preferredUrl = useLogoUrl(listing.company, listing.logoUrl);
-  const clearbitUrl = listing.logoUrl;
-  const isBrandfetch = preferredUrl.includes("brandfetch.io");
-
-  const [displayUrl, setDisplayUrl] = useState(preferredUrl);
-  const [showIcon, setShowIcon] = useState(false);
+  const [showIcon, setShowIcon] = useState(!listing.logoUrl);
 
   useEffect(() => {
-    setDisplayUrl(preferredUrl);
-    setShowIcon(false);
-  }, [preferredUrl]);
+    setShowIcon(!listing.logoUrl);
+  }, [listing.logoUrl]);
 
   const handleImgError = useCallback(() => {
-    if (displayUrl === preferredUrl && isBrandfetch && clearbitUrl && clearbitUrl !== preferredUrl) {
-      setDisplayUrl(clearbitUrl);
-    } else {
-      setShowIcon(true);
-    }
-  }, [displayUrl, preferredUrl, isBrandfetch, clearbitUrl]);
+    setShowIcon(true);
+  }, []);
 
-  const showImg = !showIcon && displayUrl;
+  const showImg = !showIcon && listing.logoUrl;
 
   return (
     <span className="card-glow-wrapper">
@@ -43,13 +32,12 @@ export function ListingCard({ listing }: ListingCardProps) {
       <div className="flex-shrink-0 h-11 w-11 rounded-lg bg-secondary flex items-center justify-center overflow-hidden border border-border">
         {showImg ? (
           <img
-            key={displayUrl}
-            src={displayUrl}
+            key={listing.logoUrl}
+            src={listing.logoUrl}
             alt={`${listing.company} logo`}
             className="h-full w-full object-contain"
             onError={handleImgError}
             loading="lazy"
-            referrerPolicy="no-referrer"
           />
         ) : (
           <Building2 className="h-5 w-5 text-muted-foreground" />

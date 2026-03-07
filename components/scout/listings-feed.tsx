@@ -7,7 +7,6 @@ import { SearchBar } from "./search-bar";
 import { FilterBar } from "./filter-bar";
 import { ListingCard } from "./listing-card";
 import { ListingSkeleton } from "./listing-skeleton";
-import { useLogoCache } from "@/lib/logo-cache";
 import type { Listing } from "@/app/api/listings/route";
 import { Loader2, SearchX } from "lucide-react";
 
@@ -176,20 +175,6 @@ export function ListingsFeed() {
 
   const displayListings = page === 1 && data ? data.listings : allListings;
   const totalCount = data?.total || 0;
-  const { fetchCompanies } = useLogoCache();
-
-  const displayCompanyIds = displayListings
-    .map((l) => l.company.toLowerCase())
-    .filter((c, i, arr) => arr.indexOf(c) === i)
-    .sort()
-    .join(",");
-
-  useEffect(() => {
-    if (displayListings.length > 0) {
-      fetchCompanies(displayListings.map((l) => l.company));
-    }
-  }, [displayCompanyIds, displayListings.length, fetchCompanies]);
-
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 flex flex-col gap-5">
       <SearchBar value={search} onChange={setSearch} />

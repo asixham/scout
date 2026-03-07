@@ -133,6 +133,8 @@ const FAANG_PLUS = new Set([
   "vercel",
 ]);
 
+const LOGO_URL_VERSION = "20260307b";
+
 export interface Listing {
   id: string;
   company: string;
@@ -173,16 +175,12 @@ function cleanText(text: string): string {
     .trim();
 }
 
-function companyToDomain(company: string): string {
-  return company
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .trim();
-}
-
-function getFallbackLogoUrl(company: string): string {
-  const domain = `${companyToDomain(company)}.com`;
-  return `https://logo.clearbit.com/${domain}`;
+function getLogoUrl(company: string): string {
+  const params = new URLSearchParams({
+    company,
+    v: LOGO_URL_VERSION,
+  });
+  return `/api/logo?${params.toString()}`;
 }
 
 function parseCvrveTable(markdown: string): Listing[] {
@@ -241,7 +239,7 @@ function parseCvrveTable(markdown: string): Listing[] {
       type: "internship",
       source: "cvrve",
       isFaang,
-      logoUrl: getFallbackLogoUrl(company),
+      logoUrl: getLogoUrl(company),
     });
   }
 
@@ -328,7 +326,7 @@ function parseSpeedyApplyTable(markdown: string): Listing[] {
       type: currentSection,
       source: "speedyapply",
       isFaang,
-      logoUrl: getFallbackLogoUrl(company),
+      logoUrl: getLogoUrl(company),
     });
   }
 
@@ -405,7 +403,7 @@ function parseSimplifyTable(markdown: string): Listing[] {
       type: "newgrad",
       source: "simplify",
       isFaang,
-      logoUrl: getFallbackLogoUrl(company),
+      logoUrl: getLogoUrl(company),
     });
   }
 
