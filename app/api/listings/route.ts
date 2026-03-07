@@ -133,8 +133,6 @@ const FAANG_PLUS = new Set([
   "vercel",
 ]);
 
-const LOGO_URL_VERSION = "20260307b";
-
 export interface Listing {
   id: string;
   company: string;
@@ -176,11 +174,7 @@ function cleanText(text: string): string {
 }
 
 function getLogoUrl(company: string): string {
-  const params = new URLSearchParams({
-    company,
-    v: LOGO_URL_VERSION,
-  });
-  return `/api/logo?${params.toString()}`;
+  return "";
 }
 
 function parseCvrveTable(markdown: string): Listing[] {

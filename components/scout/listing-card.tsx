@@ -1,26 +1,14 @@
 "use client";
 
-import { ExternalLink, MapPin, DollarSign, Building2 } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { ExternalLink, MapPin, DollarSign } from "lucide-react";
 import type { Listing } from "@/app/api/listings/route";
+import { CompanyLogo } from "./company-logo";
 
 interface ListingCardProps {
   listing: Listing;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
-  const [showIcon, setShowIcon] = useState(!listing.logoUrl);
-
-  useEffect(() => {
-    setShowIcon(!listing.logoUrl);
-  }, [listing.logoUrl]);
-
-  const handleImgError = useCallback(() => {
-    setShowIcon(true);
-  }, []);
-
-  const showImg = !showIcon && listing.logoUrl;
-
   return (
     <span className="card-glow-wrapper">
       <a
@@ -30,18 +18,7 @@ export function ListingCard({ listing }: ListingCardProps) {
         className="group flex gap-4 items-center rounded-lg border border-border bg-card p-4 card-glow"
       >
       <div className="flex-shrink-0 h-11 w-11 rounded-lg bg-secondary flex items-center justify-center overflow-hidden border border-border">
-        {showImg ? (
-          <img
-            key={listing.logoUrl}
-            src={listing.logoUrl}
-            alt={`${listing.company} logo`}
-            className="h-full w-full object-contain"
-            onError={handleImgError}
-            loading="lazy"
-          />
-        ) : (
-          <Building2 className="h-5 w-5 text-muted-foreground" />
-        )}
+        <CompanyLogo companyName={listing.company} />
       </div>
 
       <div className="flex-1">
